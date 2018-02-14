@@ -27,35 +27,46 @@ def simple_minimizer(locations, weight_list):
     output_list = []
     trip_id = 0
 
-    locations_uncovered = locations
-    locations_uncovered[:] = True
+    pd_locations = pd.Series(locations)
+    locations_uncovered = pd.Series(locations).notnull()
 
-    distance_from_sp = distance_from_starting_point(locations)
+    distance_from_sp = distance_from_starting_point(pd_locations)
     min_pos = distance_from_sp[locations_uncovered].idxmin()
 
     while locations_uncovered.any():
-
-
-        dt_mx = distance_matrix(locations)
-        used_points = create_trip(min_pos, dt_mx, weight_list)
+        print('calculating trip..')
+        used_points, min_pos = create_trip(min_pos, weight_list, pd_locations[locations_uncovered])
         for gift_id in used_points:
             output_list.append((gift_id, trip_id))
 
         locations_uncovered[used_points] = False
         trip_id += 1
+        print('quantity of presents calculated', len(output_list))
 
     return output_list
 
 
-def create_trip(starting_point, distance_matrix, weight_list):
+def create_trip(starting_point, weight_list, locations):
     weight = weight_list[starting_point]
     used_points = [starting_point]
+    sp = starting_point
 
     while True:
-        starting_point = distance_matrix[starting_point].idxmin()
-        test_weight = weight + weight_list[starting_point]
+        df = get_distances(locations[sp], locations)
+        sp = df[~df.index.isin(used_points)].idxmin()
+        test_weight = weight + weight_list[sp]
         if test_weight <= 1000:
-            used_points.append(starting_point)
+            used_points.append(sp)
+            weight = test_weight
+            print('used point', sp, weight)
+        else:
+            return used_points, sp
 
-    return used_points
 
+def get_distances(starting_point, pd_locations):
+    locations = pd_locations.values
+    distance = []
+    for location in locations:
+        distance.append(haversine(starting_point, location))
+
+    return pd.Series(distance, index=pd_locations.index)
