@@ -19,6 +19,23 @@ def make_fa(locations):
     return pd.DataFrame(list_of_lists)
 
 
+STARTING_POINT = (90, 0)
+SLEIGH_WEIGHT = 10
+
+
+def wrw_calculator(weights, locations):
+    point_a = STARTING_POINT
+    wrw = 0
+
+    for location in locations:
+        wrw += (sum(weights) + SLEIGH_WEIGHT) * haversine(point_a, location)
+        point_a = location
+
+    wrw += SLEIGH_WEIGHT * haversine(point_a, STARTING_POINT)
+
+    return wrw
+
+
 data = pd.read_csv('data/raw/train.csv')
 
 subset = data[['Latitude', 'Longitude']]
@@ -31,6 +48,7 @@ df = df.T
 
 data['fa'] = fa.fit_transform(df)
 data = data.sort_values(by=['fa'])
+data = data.reset_index(drop=True)
 
 usable = data[['GiftId', 'Weight', 'fa']]
 
@@ -41,7 +59,6 @@ output = []
 print(data)
 
 for index, gift_id, weight, fa in usable.itertuples():
-    print(gift_id, weight, fa)
     if total_weight + weight > 1000:
         trip_id += 1
         total_weight = weight
@@ -51,7 +68,14 @@ for index, gift_id, weight, fa in usable.itertuples():
     output.append((gift_id, trip_id))
 
 output = pd.DataFrame(output, columns=['GiftId', 'TripId'])
+data = data.drop(columns=['GiftId'])
+
 ndf = pd.concat([data, output], axis=1)
-grouper = ndf.groupby('TripId')['Weight'].sum()
-print(grouper)
+
+ndf = ndf.sort_values(by=['Weight'], ascending=False)
+ndf = ndf.sort_values(by=['TripId'])
+ndf = ndf.reset_index(drop=True)
+
+output = ndf[['GiftId', 'TripId']]
+
 output.to_csv('output.csv', index=False)
