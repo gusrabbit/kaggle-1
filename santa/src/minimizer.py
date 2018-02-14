@@ -53,7 +53,8 @@ def create_trip(starting_point, weight_list, locations):
 
     while True:
         df = get_distances(locations[sp], locations)
-        sp = df[~df.index.isin(used_points)].idxmin()
+        if df[~df.index.isin(used_points)].any():
+            sp = df[~df.index.isin(used_points)].idxmin()
         test_weight = weight + weight_list[sp]
         if test_weight <= 1000:
             used_points.append(sp)
