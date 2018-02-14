@@ -1,0 +1,9 @@
+Your goal is to minimize total weighted reindeer weariness:
+Weighted Reindeer Weariness = (distance traveled) * (weights carried for that segment)
+
+All sleighs start from north pole (Lat=90, Long=0),
+
+Sleighs have a base weight = 10
+
+Each sleigh has a weight limit = 1000 (excluding the sleigh base weight)
+
