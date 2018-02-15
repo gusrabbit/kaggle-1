@@ -29,21 +29,23 @@ def wrw_single_trip(weight, location_a, location_b):
 def trip_optimizer(df):
     output = []
     location_a = STARTING_POINT
-    truth_table = pd.Series(df['TripId']).notnull()
+    trips = df['TripId']
+    truth_table = pd.Series(trips).notnull()
+
     while truth_table.any():
         max_wrw = 0
-        temp_df = df[['GiftId', 'Weight', 'Latitude', 'Longitude']]
-        print(temp_df)
-        print(truth_table)
+        temp_df = df[['GiftId', 'TripId', 'Weight', 'Latitude', 'Longitude']]
+
         temp_df = temp_df[truth_table]
-        for index, gift_id, weight, latitude, longitude in temp_df.itertuples():
+        for index, gift_id, trip_id, weight, latitude, longitude in temp_df.itertuples():
             location_b = (latitude, longitude)
             wrw = wrw_single_trip(weight, location_a, location_b)
             if wrw > max_wrw:
                 max_wrw = wrw
                 output_gift_id = gift_id
+                output_index = index
 
-        output.append(output_gift_id)
-        truth_table[output_gift_id] = False
+        output.append((output_gift_id, trip_id))
+        truth_table[output_index] = False
 
     return output
