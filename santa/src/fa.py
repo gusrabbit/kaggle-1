@@ -69,8 +69,37 @@ def create_cat_truth_table():
 
     return pd.DataFrame(truth_table, columns=['Lat', 'Lon', 'Cat'])
 
-data = pd.read_csv('data/raw/train.csv')
 
+def create_trip_output_from_ordered_df(data):
+    usable = data[['GiftId', 'Weight', 'fa']]
+
+    total_weight = 0
+    trip_id = 0
+
+    output = []
+
+    for index, gift_id, weight, fa in usable.itertuples():
+        if total_weight + weight > 1000:
+            trip_id += 1
+            total_weight = weight
+        else:
+            total_weight += weight
+
+        output.append((gift_id, trip_id))
+        pd.DataFrame(output, columns=['GiftId', 'TripId'])
+
+
+def trip_optimizer_routine(df):
+    trips_number = df['TripId'].max() + 1
+    output = []
+
+    for i in range(trips_number):
+        temp_df = df[df['TripId'] == i]
+        output.extend(trip_optimizer(temp_df))
+    return pd.DataFrame(output, columns=['GiftId', 'TripId'])
+
+
+data = pd.read_csv('data/raw/train.csv')
 subset = data[['Latitude', 'Longitude']]
 locations = [tuple(x) for x in subset.values]
 
@@ -78,34 +107,10 @@ data['fa'] = categorize_lat_lon(locations)
 data = data.sort_values(by=['fa'])
 data = data.reset_index(drop=True)
 
-usable = data[['GiftId', 'Weight', 'fa']]
-
-total_weight = 0
-trip_id = 0
-
-output = []
-print(data)
-
-for index, gift_id, weight, fa in usable.itertuples():
-    if total_weight + weight > 1000:
-        trip_id += 1
-        total_weight = weight
-    else:
-        total_weight += weight
-
-    output.append((gift_id, trip_id))
-
-output = pd.DataFrame(output, columns=['GiftId', 'TripId'])
+output = create_trip_output_from_ordered_df(data)
 data = data.drop(columns=['GiftId'])
 
 ndf = pd.concat([data, output], axis=1)
 
-trips_number = ndf['TripId'].max() + 1
-output = []
-
-for i in range(trips_number):
-    temp_df = ndf[ndf['TripId'] == i]
-    output.extend(trip_optimizer(temp_df))
-
-output = pd.DataFrame(output, columns=['GiftId', 'TripId'])
+output = trip_optimizer_routine(ndf)
 output.to_csv('output.csv', index=False)
