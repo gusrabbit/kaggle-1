@@ -4,7 +4,7 @@ import pandas as pd
 
 data = pd.read_csv('data/raw/train.csv')
 
-#data = data[0:1000]
+data = data
 
 subset = data[['Latitude', 'Longitude']]
 locations = [tuple(x) for x in subset.values]

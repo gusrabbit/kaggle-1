@@ -1,4 +1,6 @@
 from sklearn.decomposition import FactorAnalysis
+from santa.src.minimizer import *
+from santa.src.wrw import *
 
 POINT_A = (0, 0)
 POINT_B = (90, 0)
@@ -72,10 +74,15 @@ data = data.drop(columns=['GiftId'])
 
 ndf = pd.concat([data, output], axis=1)
 
-ndf = ndf.sort_values(by=['Weight'], ascending=False)
-ndf = ndf.sort_values(by=['TripId'])
-ndf = ndf.reset_index(drop=True)
+trips_number = ndf['TripId'].max() + 1
+order_of_gifts = []
 
-output = ndf[['GiftId', 'TripId']]
+for i in range(trips_number):
+    temp_df = ndf[ndf['TripId'] == i]
+    print(temp_df)
+    order_of_gifts.extend(trip_optimizer(temp_df))
 
-output.to_csv('output.csv', index=False)
+ndf.set_index('GiftId')
+output = ndf['TripId'][order_of_gifts]
+
+output.to_csv('output.csv')
