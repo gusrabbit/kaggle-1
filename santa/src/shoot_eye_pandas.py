@@ -1,4 +1,5 @@
 import pandas as pd
+import time
 from haversine import haversine
 
 # Initialize constantss
@@ -13,8 +14,7 @@ def bb_sort(ll):
     :param ll:
     :return:
     """
-    print('ll')
-    print(ll)
+
     ll = [[0, NORTH_POLE, 10]] + ll[:] + [[0, NORTH_POLE, 10]]
     for i in range(1, len(ll) - 2):
         lcopy = ll[:]
@@ -44,6 +44,7 @@ gifts['j'] = 0
 
 
 def prepare_data(n):
+    # Divide dataset in 4 ? why?
     i_ = 0
     for i in range(90, -90, int(-180 / n)):
         i_ += 1
@@ -58,30 +59,65 @@ def prepare_data(n):
                         gifts['Longitude'] < (j)), 'j'] = j_
 
 
-def prepare_trip(limit_):
-    trips = gifts[gifts['TripId'] == 0]
-    trips = trips.sort_values(['i', 'j', 'Longitude', 'Latitude'])
-    trips = trips[0:limit_]
-    t_ = 0
-    while len(trips.GiftId) > 0:
-        g = []
-        t_ += 1
-        w_ = 0.0
-        for i in range(len(trips.GiftId)):
-            if (w_ + float(trips.iloc[i, 3])) <= WEIGHT_LIMIT:
-                w_ += float(trips.iloc[i, 3])
-                g.append(trips.iloc[i, 0])
-        gifts.loc[gifts['GiftId'].isin(g), 'TripId'] = t_
-        trips = gifts[gifts['TripId'] == 0]
-        trips = trips.sort_values(['i', 'j', 'Longitude', 'Latitude'])
-        trips = trips[0:limit_]
+def prepare_trip(max_gifts_per_trip):
+    """
 
-    ou_ = open("submission_opt" + str(limit_) + " " + str(n) + ".csv", "w")
+    :param max_gifts_per_trip: Maximum amount of gifts per trip
+    :return:
+    """
+    time_a = time.time()
+
+    # Create trips DataFrame, which is a sorted Gifts DataFrame
+    trips = gifts.sort_values(['i', 'j', 'Longitude', 'Latitude'])
+
+    # Get length of DataFrame
+    length = trips.shape[0]
+
+    # Initialize Variables
+    line_counter = 0
+    trip_id = 0
+    trip_list = []
+
+    # Put gifts into DataFrame according to DataFrame order considering a max gifts per trip
+    while line_counter < length:
+        g = []
+        weight = 0.0
+
+        # Initializes temporary DataFrame that will be used to calculate weight
+        df = trips[line_counter:line_counter + max_gifts_per_trip]
+
+        # Loop to check if there weight is within limits
+        for i in range(df.shape[0]):
+            if weight + df.iloc[i, 3] <= WEIGHT_LIMIT:
+                weight += float(df.iloc[i, 3])
+                g.append(df.iloc[i, 0])
+            else:
+                break
+
+        # Adjusts original
+        trip_list.extend([trip_id]*len(g))
+
+        # Adjusts id for next trip
+        trip_id += 1
+
+        # The amount of lines that were used may vary due to weight carried
+        line_counter += len(g)
+
+    # Reset trips index
+    trips.reset_index(inplace=True)
+
+    # Inserts tripIds
+    trips['TripId'] = pd.Series(trip_list)
+
+    print('took:', time.time() - time_a)
+    print(line_counter)
+
+    ou_ = open("submission_opt" + str(max_gifts_per_trip) + " " + str(n) + ".csv", "w")
     ou_.write("TripId,GiftId\n")
     bm = 0.0
 
-    for s_ in range(1, t_ + 1):
-        trip = gifts[gifts['TripId'] == s_]
+    for s_ in range(0, trip_id):
+        trip = trips[trips['TripId'] == s_]
         trip = trip.sort_values(['Latitude', 'Longitude'], ascending=[0, 1])
 
         a = []
@@ -99,6 +135,8 @@ def prepare_trip(limit_):
             for y_ in range(len(b)):
                 ou_.write(str(s_) + "," + str(b[y_][0]) + "\n")
     ou_.close()
+
+    print('took:', time.time() - time_a)
     return bm
 
 
