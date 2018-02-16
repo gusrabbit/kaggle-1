@@ -56,6 +56,7 @@ def categorize_lat_lon(locations):
 
 
 def categorize_df_lat_lon(df_line, truth_table):
+    print(df_line)
     return truth_table[(truth_table['Lat'] == df_line['Lat']) & (truth_table['Lon'] == df_line['Lon'])]['Cat'].values[0]
 
 
@@ -86,7 +87,7 @@ def create_trip_output_from_ordered_df(data):
             total_weight += weight
 
         output.append((gift_id, trip_id))
-        pd.DataFrame(output, columns=['GiftId', 'TripId'])
+    return pd.DataFrame(output, columns=['GiftId', 'TripId'])
 
 
 def trip_optimizer_routine(df):
