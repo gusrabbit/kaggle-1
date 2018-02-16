@@ -95,7 +95,7 @@ def prepare_trip(max_gifts_per_trip):
                 break
 
         # Adjusts original
-        trip_list.extend([trip_id]*len(g))
+        trip_list.extend([trip_id] * len(g))
 
         # Adjusts id for next trip
         trip_id += 1
@@ -103,18 +103,14 @@ def prepare_trip(max_gifts_per_trip):
         # The amount of lines that were used may vary due to weight carried
         line_counter += len(g)
 
-    # Reset trips index
-    trips.reset_index(inplace=True)
-
     # Inserts tripIds
-    trips['TripId'] = pd.Series(trip_list)
+    trips['TripId'] = pd.Series(trip_list, index=trips.index)
 
     print('took:', time.time() - time_a)
     print(line_counter)
 
-    ou_ = open("submission_opt" + str(max_gifts_per_trip) + " " + str(n) + ".csv", "w")
-    ou_.write("TripId,GiftId\n")
     bm = 0.0
+    x = []
 
     for s_ in range(0, trip_id):
         trip = trips[trips['TripId'] == s_]
@@ -128,15 +124,18 @@ def prepare_trip(max_gifts_per_trip):
             print("TripId", s_, "No Change", path_opt_test(a), path_opt_test(b))
             bm += path_opt_test(a)
             for y_ in range(len(a)):
-                ou_.write(str(s_) + "," + str(a[y_][0]) + "\n")
+                x.append((s_, a[y_][0]))
         else:
             print("TripId ", s_, "Optimized", path_opt_test(a) - path_opt_test(b))
             bm += path_opt_test(b)
             for y_ in range(len(b)):
-                ou_.write(str(s_) + "," + str(b[y_][0]) + "\n")
-    ou_.close()
+                x.append((s_, b[y_][0]))
 
     print('took:', time.time() - time_a)
+
+    output = pd.DataFrame(x, columns=['GiftId', 'TripId'])
+    output.to_csv('output_shootout.csv', index=False)
+
     return bm
 
 
