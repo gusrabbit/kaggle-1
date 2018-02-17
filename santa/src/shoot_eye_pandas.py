@@ -8,7 +8,33 @@ NORTH_POLE = (90, 0)
 WEIGHT_LIMIT = 1000.0
 
 
-def bb_sort(gifts_data):
+def bb_sort(gifts_data, key):
+    """
+
+    :param gifts_data:
+    :return:
+    """
+
+    # Initializes range length
+    length = len(gifts_data) - key
+
+    # Start optimization loop
+    for i in range(length):
+        # Creates a copy of gifts_data
+        copied_gifts = gifts_data[:]  # [:] is used to copy the list
+
+        # Switches order of elements on list
+        copied_gifts[i], copied_gifts[i + key] = gifts_data[i + key], gifts_data[i]
+
+        # Check which of the lists produce an optimal path
+        if path_opt_test(gifts_data) > path_opt_test(copied_gifts):
+            # Alters original set in case found a more efficient path
+            gifts_data = copied_gifts[:]  # [:] is used to copy the list
+
+    return gifts_data
+
+
+def complex_sort(gifts_data):
     """
 
     :param gifts_data:
@@ -21,15 +47,45 @@ def bb_sort(gifts_data):
     # Start optimization loop
     for i in range(length):
         # Creates a copy of gifts_data
-        copied_gifts = gifts_data[:]  # [:] is used to copy the list
+        copied_gifts_1 = gifts_data[:]  # [:] is used to copy the list
+
+        # Creates a copy of gifts_data
+        copied_gifts_2 = gifts_data[:]  # [:] is used to copy the list
+
+        # Creates a copy of gifts_data
+        copied_gifts_3 = gifts_data[:]  # [:] is used to copy the list
+
+        original = path_opt_test(gifts_data)
 
         # Switches order of elements on list
-        copied_gifts[i], copied_gifts[i + 1] = gifts_data[i + 1], gifts_data[i]
+        copied_gifts_1[i], copied_gifts_1[i + 1] = gifts_data[i + 1], gifts_data[i]
+        copy_1 = path_opt_test(copied_gifts_1)
+
+        # Switches order of elements on list
+        if i < length - 1:
+            copied_gifts_2[i], copied_gifts_2[i + 2] = gifts_data[i + 2], gifts_data[i]
+            copy_2 = path_opt_test(copied_gifts_2)
+
+            # Switches order of elements on list
+            if i < length - 2:
+                copied_gifts_3[i], copied_gifts_3[i + 3] = gifts_data[i + 3], gifts_data[i]
+                copy_3 = path_opt_test(copied_gifts_3)
+                minimum_value = min(original, copy_1, copy_2, copy_3)
+            else:
+                minimum_value = min(original, copy_1, copy_2)
+
+        else:
+            minimum_value = min(original, copy_1)
 
         # Check which of the lists produce an optimal path
-        if path_opt_test(gifts_data) > path_opt_test(copied_gifts):
-            # Alters original set in case found a more efficient path
-            gifts_data = copied_gifts[:]  # [:] is used to copy the list
+        if original == minimum_value:
+            pass
+        elif copy_1 == minimum_value:
+            gifts_data = copied_gifts_1[:]  # [:] is used to copy the list
+        elif copy_2 == minimum_value:
+            gifts_data = copied_gifts_2[:]  # [:] is used to copy the list
+        elif copy_3 == minimum_value:
+            gifts_data = copied_gifts_3[:]  # [:] is used to copy the list
 
     return gifts_data
 
@@ -130,11 +186,14 @@ def prepare_trip(max_gifts_per_trip):
         a = []
         for index, gift_id, latitude, longitude, weight, *rest in trip.itertuples():
             a.append((gift_id, (latitude, longitude), weight))
-        b = bb_sort(a)
-        c = trip_optimizer(trip, 1)
-        d = trip_optimizer(trip, 2)
-        e = trip_optimizer(trip, 3)
-        f = trip_optimizer(trip, 4)
+        b = bb_sort(a, 1)
+        c = bb_sort(a, 2)
+        d = bb_sort(a, 3)
+        e = trip_optimizer(trip, 1)
+        f = trip_optimizer(trip, 2)
+        g = trip_optimizer(trip, 3)
+        h = trip_optimizer(trip, 4)
+        i = complex_sort(a)
 
         path_a = path_opt_test(a)
         path_b = path_opt_test(b)
@@ -142,8 +201,11 @@ def prepare_trip(max_gifts_per_trip):
         path_d = path_opt_test(d)
         path_e = path_opt_test(e)
         path_f = path_opt_test(f)
+        path_g = path_opt_test(g)
+        path_h = path_opt_test(h)
+        path_i = path_opt_test(i)
 
-        max_index = pd.Series([path_a, path_b, path_c, path_d, path_e, path_f]).idxmin()
+        max_index = pd.Series([path_a, path_b, path_c, path_d, path_e, path_f, path_g, path_h, path_i]).idxmin()
 
         print(trip_id, max_index)
         count.append(max_index)
