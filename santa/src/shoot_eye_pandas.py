@@ -2,39 +2,46 @@ import pandas as pd
 import time
 from haversine import haversine
 
-# Initialize constantss
+# Initialize constants
 NORTH_POLE = (90, 0)
 WEIGHT_LIMIT = 1000.0
 
 
-def bb_sort(ll):
+def bb_sort(gifts_data):
     """
 
-
-    :param ll:
+    :param gifts_data:
     :return:
     """
 
-    ll = [[0, NORTH_POLE, 10]] + ll[:] + [[0, NORTH_POLE, 10]]
-    for i in range(1, len(ll) - 2):
-        lcopy = ll[:]
-        lcopy[i], lcopy[i + 1] = ll[i + 1][:], ll[i][:]
-        if path_opt_test(ll[1:-1]) > path_opt_test(lcopy[1:-1]):
-            ll = lcopy[:]
-    return ll[1:-1]
+    # Initializes range length
+    length = len(gifts_data) - 1
+
+    # Start optimization loop
+    for i in range(length):
+        # The [:] is used to copy the list
+        lcopy = gifts_data[:]
+
+        #
+        lcopy[i], lcopy[i + 1] = gifts_data[i + 1][:], gifts_data[i][:]
+        if path_opt_test(gifts_data) > path_opt_test(lcopy):
+            gifts_data = lcopy[:]
+        print(i)
+
+    return gifts_data
 
 
 def path_opt_test(llo):
-    f_ = 0.0
-    d_ = 0.0
-    l_ = NORTH_POLE
+    wrw = 0.0
+    distance = 0.0
+    location = NORTH_POLE
     for i in range(len(llo)):
-        d_ += haversine(l_, llo[i][1])
-        f_ += d_ * llo[i][2]
-        l_ = llo[i][1]
-    d_ += haversine(l_, NORTH_POLE)
-    f_ += d_ * 10  # sleigh weight for whole trip
-    return f_
+        distance += haversine(location, llo[i][1])
+        wrw += distance * llo[i][2]
+        location = llo[i][1]
+    distance += haversine(location, NORTH_POLE)
+    wrw += distance * 10  # sleigh weight for whole trip
+    return wrw
 
 
 gifts = pd.read_csv("../data/raw/train.csv")
@@ -75,7 +82,7 @@ def prepare_trip(max_gifts_per_trip):
 
     # Initialize Variables
     line_counter = 0
-    trip_id = 0
+    max_trip = 0
     trip_list = []
 
     # Put gifts into DataFrame according to DataFrame order considering a max gifts per trip
@@ -95,10 +102,10 @@ def prepare_trip(max_gifts_per_trip):
                 break
 
         # Adjusts original
-        trip_list.extend([trip_id] * len(g))
+        trip_list.extend([max_trip] * len(g))
 
         # Adjusts id for next trip
-        trip_id += 1
+        max_trip += 1
 
         # The amount of lines that were used may vary due to weight carried
         line_counter += len(g)
@@ -112,24 +119,22 @@ def prepare_trip(max_gifts_per_trip):
     bm = 0.0
     x = []
 
-    for s_ in range(0, trip_id):
-        trip = trips[trips['TripId'] == s_]
+    for trip_id in range(0, max_trip):
+        trip = trips[trips['TripId'] == trip_id]
         trip = trip.sort_values(['Latitude', 'Longitude'], ascending=[0, 1])
 
         a = []
-        for x_ in range(len(trip.GiftId)):
-            a.append([trip.iloc[x_, 0], (trip.iloc[x_, 1], trip.iloc[x_, 2]), trip.iloc[x_, 3]])
+        for row in range(trip.shape[0]):
+            a.append((trip.iloc[row, 0], (trip.iloc[row, 1], trip.iloc[row, 2]), trip.iloc[row, 3]))
         b = bb_sort(a)
         if path_opt_test(a) <= path_opt_test(b):
-            print("TripId", s_, "No Change", path_opt_test(a), path_opt_test(b))
             bm += path_opt_test(a)
             for y_ in range(len(a)):
-                x.append((s_, a[y_][0]))
+                x.append((a[y_][0], trip_id))
         else:
-            print("TripId ", s_, "Optimized", path_opt_test(a) - path_opt_test(b))
             bm += path_opt_test(b)
             for y_ in range(len(b)):
-                x.append((s_, b[y_][0]))
+                x.append((b[y_][0], trip_id))
 
     print('took:', time.time() - time_a)
 
