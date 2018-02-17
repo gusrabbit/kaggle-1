@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 from haversine import haversine
+from santa.src.wrw import *
 
 # Initialize constants
 NORTH_POLE = (90, 0)
@@ -19,14 +20,16 @@ def bb_sort(gifts_data):
 
     # Start optimization loop
     for i in range(length):
-        # The [:] is used to copy the list
-        lcopy = gifts_data[:]
+        # Creates a copy of gifts_data
+        copied_gifts = gifts_data[:]  # [:] is used to copy the list
 
-        #
-        lcopy[i], lcopy[i + 1] = gifts_data[i + 1][:], gifts_data[i][:]
-        if path_opt_test(gifts_data) > path_opt_test(lcopy):
-            gifts_data = lcopy[:]
-        print(i)
+        # Switches order of elements on list
+        copied_gifts[i], copied_gifts[i + 1] = gifts_data[i + 1], gifts_data[i]
+
+        # Check which of the lists produce an optimal path
+        if path_opt_test(gifts_data) > path_opt_test(copied_gifts):
+            # Alters original set in case found a more efficient path
+            gifts_data = copied_gifts[:]  # [:] is used to copy the list
 
     return gifts_data
 
@@ -35,10 +38,10 @@ def path_opt_test(llo):
     wrw = 0.0
     distance = 0.0
     location = NORTH_POLE
-    for i in range(len(llo)):
-        distance += haversine(location, llo[i][1])
-        wrw += distance * llo[i][2]
-        location = llo[i][1]
+    for element in llo:
+        distance += haversine(location, element[1])
+        wrw += distance * element[2]
+        location = element[1]
     distance += haversine(location, NORTH_POLE)
     wrw += distance * 10  # sleigh weight for whole trip
     return wrw
@@ -118,15 +121,33 @@ def prepare_trip(max_gifts_per_trip):
 
     bm = 0.0
     x = []
+    count = []
 
     for trip_id in range(0, max_trip):
         trip = trips[trips['TripId'] == trip_id]
         trip = trip.sort_values(['Latitude', 'Longitude'], ascending=[0, 1])
 
         a = []
-        for row in range(trip.shape[0]):
-            a.append((trip.iloc[row, 0], (trip.iloc[row, 1], trip.iloc[row, 2]), trip.iloc[row, 3]))
+        for index, gift_id, latitude, longitude, weight, *rest in trip.itertuples():
+            a.append((gift_id, (latitude, longitude), weight))
         b = bb_sort(a)
+        c = trip_optimizer(trip, 1)
+        d = trip_optimizer(trip, 2)
+        e = trip_optimizer(trip, 3)
+        f = trip_optimizer(trip, 4)
+
+        path_a = path_opt_test(a)
+        path_b = path_opt_test(b)
+        path_c = path_opt_test(c)
+        path_d = path_opt_test(d)
+        path_e = path_opt_test(e)
+        path_f = path_opt_test(f)
+
+        max_index = pd.Series([path_a, path_b, path_c, path_d, path_e, path_f]).idxmin()
+
+        print(trip_id, max_index)
+        count.append(max_index)
+
         if path_opt_test(a) <= path_opt_test(b):
             bm += path_opt_test(a)
             for y_ in range(len(a)):
@@ -136,6 +157,7 @@ def prepare_trip(max_gifts_per_trip):
             for y_ in range(len(b)):
                 x.append((b[y_][0], trip_id))
 
+    print(pd.Series(count).value_counts())
     print('took:', time.time() - time_a)
 
     output = pd.DataFrame(x, columns=['GiftId', 'TripId'])

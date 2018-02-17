@@ -22,30 +22,36 @@ def wrw_calculator(weights, locations):
     return wrw
 
 
-def wrw_single_trip(weight, location_a, location_b):
-    return weight * haversine(location_a, location_b)
+def wrw_single_trip(weight, location_a, location_b, exp):
+    distance = haversine(location_a, location_b)
+    distance = distance ** exp
+    return weight / distance
 
 
-def trip_optimizer(df):
+
+def trip_optimizer(df, exp):
     output = []
     location_a = STARTING_POINT
-    trips = df['TripId']
-    truth_table = pd.Series(trips).notnull()
+
+    temp_df = df
+    temp_df.reset_index(inplace=True, drop=True)
+
+    truth_table = pd.Series(df['TripId']).notnull()
 
     while truth_table.any():
         max_wrw = 0
-        temp_df = df[['GiftId', 'TripId', 'Weight', 'Latitude', 'Longitude']]
-
         temp_df = temp_df[truth_table]
-        for index, gift_id, trip_id, weight, latitude, longitude in temp_df.itertuples():
+
+        for index, gift_id, latitude, longitude, weight, *rest in temp_df.itertuples():
             location_b = (latitude, longitude)
-            wrw = wrw_single_trip(weight, location_a, location_b)
+            wrw = wrw_single_trip(weight, location_a, location_b, exp)
             if wrw > max_wrw:
                 max_wrw = wrw
-                output_gift_id = gift_id
+                output_gift_id, output_location, output_weight = gift_id, location_b, weight
                 output_index = index
 
-        output.append((output_gift_id, trip_id))
+        location_a = output_location
+        output.append((output_gift_id, output_location, output_weight))
         truth_table[output_index] = False
 
     return output
